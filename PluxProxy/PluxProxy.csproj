@@ -8,9 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="PluxDotNet">
-      <HintPath>./lib/PluxDotNet/plux.dll</HintPath>
-    </Reference>
+    <Content Include="PluxProxy.exe.config" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="PluxDotNet" HintPath="./lib/PluxDotNet/plux.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NLog" Version="4.7.5" />
   </ItemGroup>
 
 </Project>
