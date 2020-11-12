@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="NLog" Version="4.7.5" />
+    <PackageReference Include="CommandLineParser" Version="2.8.0" />
   </ItemGroup>
 
 </Project>
