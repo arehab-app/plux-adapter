@@ -9,7 +9,7 @@ using CommandLine;
 
 namespace PluxProxy
 {
-    public sealed class Server : IExecutable
+    public sealed class Server : Program.IExecutable
     {
         [Verb("server", isDefault: true, HelpText = "Start server.")]
         public sealed class Options

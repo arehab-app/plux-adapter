@@ -8,6 +8,12 @@ namespace PluxProxy
 {
     public static class Program
     {
+        public interface IExecutable
+        {
+            Task<int> Start();
+            void Stop();
+        }
+
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         public static async Task<int> Main(string[] args)
