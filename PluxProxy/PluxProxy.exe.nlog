@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nlog autoReload="true" throwConfigExceptions="true"
+  xmlns="http://www.nlog-project.org/schemas/NLog.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <variable name="logs" value="${processdir}/logs/" />
+  <variable name="format" value="[${longdate}][${level:uppercase=true}][${threadid}][${logger}] ${message}" />
+  <variable name="filelongdate" value="${cached:${date:format=yyyy-MM-dd-HH-mm-ss-ffff}}" />
+
+  <targets async="true">
+    <target name="file" xsi:type="AutoFlushWrapper" condition="level >= LogLevel.Warn">
+      <target xsi:type="BufferingWrapper">
+        <target
+          xsi:type="File"
+          layout="${format}"
+          encoding="utf-8"
+          fileName="${logs}PluxProxy.${filelongdate}.last.log"
+          archiveAboveSize="8388608"
+          archiveFileName="${logs}PluxProxy.${filelongdate}.{####}.log"
+          archiveNumbering="Sequence"
+          keepFileOpen="true"
+          autoFlush="false"
+          openFileFlushTimeout="1" />
+      </target>
+    </target>
+    <target name="console" xsi:type="Console" layout="${format}" writeBuffer="true" encoding="utf-8" />
+  </targets>
+
+  <rules>
+    <logger name="*" minLevel="Debug" writeTo="file" />
+    <logger name="*" minLevel="Trace" writeTo="console" />
+  </rules>
+
+</nlog>

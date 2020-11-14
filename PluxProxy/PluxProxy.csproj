@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="PluxProxy.exe.config" CopyToOutputDirectory="Always" />
+    <Content Include="PluxProxy.exe.nlog" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
   <ItemGroup>
