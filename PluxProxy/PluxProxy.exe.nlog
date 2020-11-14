@@ -4,7 +4,7 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
   <variable name="logs" value="${processdir}/logs/" />
-  <variable name="format" value="[${longdate}][${level:uppercase=true}][${threadid}][${logger}] ${message}" />
+  <variable name="format" value="[${longdate}][${level:uppercase=true}][${threadid}][${logger}] ${message:withException=true}" />
   <variable name="filelongdate" value="${cached:${date:format=yyyy-MM-dd-HH-mm-ss-ffff}}" />
 
   <targets async="true">

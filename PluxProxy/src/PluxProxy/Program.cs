@@ -33,7 +33,9 @@ namespace PluxProxy
                 e.Cancel = true;
                 executable.Stop();
             };
-            return await executable.Start();
+            try { return await executable.Start(); }
+            catch (Exception e) { logger.Error(e, "Something went wrong"); }
+            return 1;
         }
     }
 }
