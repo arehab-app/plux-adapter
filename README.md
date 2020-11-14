@@ -1,4 +1,4 @@
-# Plux Proxy
+# Plux Adapter
 
 TODO
 

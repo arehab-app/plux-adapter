@@ -6,9 +6,9 @@
             "type": "clr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/PluxProxy/bin/Debug/net451/PluxProxy.exe",
+            "program": "${workspaceFolder}/PluxAdapter/bin/Debug/net451/PluxAdapter.exe",
             "args": [],
-            "cwd": "${workspaceFolder}/PluxProxy/bin/Debug/net451",
+            "cwd": "${workspaceFolder}/PluxAdapter/bin/Debug/net451",
             "console": "internalConsole",
             "stopAtEntry": false
         },

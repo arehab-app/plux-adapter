@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using NLog;
 using CommandLine;
 
-namespace PluxProxy
+namespace PluxAdapter
 {
     public static class Program
     {
