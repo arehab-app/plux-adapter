@@ -28,7 +28,12 @@ namespace PluxAdapter
         {
             logger.Info($"Connecting to device on {path}");
             Device device = new Device(this, path);
-            device.Connect();
+            try { device.Connect(); }
+            catch (PluxDotNet.Exception.DeviceNotFound)
+            {
+                logger.Warn("Device not found");
+                return null;
+            }
             tasks.Add(Task.Run(() =>
             {
                 try { device.Start(); }
@@ -48,7 +53,8 @@ namespace PluxAdapter
                 {
                     if (devices.ContainsKey(devInfo.path)) { continue; }
                     logger.Info($"Found new device on {devInfo.path} with description: {devInfo.description}");
-                    found[devInfo.path] = Connect(devInfo.path);
+                    Device device = Connect(devInfo.path);
+                    if (!(device is null)) { found[devInfo.path] = device; }
                 }
             }
             if (found.Count == 0) { logger.Info("No new devices found"); }

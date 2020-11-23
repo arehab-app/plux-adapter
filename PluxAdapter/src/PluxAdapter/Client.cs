@@ -19,13 +19,13 @@ namespace PluxAdapter
         public sealed class Options
         {
             [Option("ip-address", Default = "127.0.0.1", HelpText = "IP to connect to.")]
-            public string IPAddress { get; set; }
+            public string IPAddress { get; private set; }
 
             [Option("port", Default = 24242, HelpText = "Port to connect to.")]
-            public int Port { get; set; }
+            public int Port { get; private set; }
 
             [Option("paths", HelpText = "(Default: all reachable paths) Paths of devices to request.")]
-            public IEnumerable<string> Paths { get; set; }
+            public IEnumerable<string> Paths { get; private set; }
         }
 
         public sealed class Device
@@ -161,6 +161,12 @@ namespace PluxAdapter
                                 foreach (Source source in device.sources) { message.Append($"\n\t\tport = {source.port}, frequencyDivisor = {source.frequencyDivisor}, resolution = {source.resolution}, channelMask = {source.channelMask}"); }
                             }
                             logger.Info(message);
+                        }
+                        if (options.Paths.Count() == 0) { if (devices.Count == 0) { return 0; } }
+                        else if (!options.Paths.SequenceEqual(devices.Select(device => device.path)))
+                        {
+                            logger.Error("Received wrong devices");
+                            return 1;
                         }
                         int lastFrame = -1;
                         byte[] header = new byte[5];

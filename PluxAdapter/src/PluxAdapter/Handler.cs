@@ -88,7 +88,7 @@ namespace PluxAdapter
                 else
                 {
                     logger.Info($"Received request for paths:\n\t{String.Join("\n\t", paths)}");
-                    requestedDevices = paths.Select(path => server.manager.Get(path));
+                    requestedDevices = paths.Select(path => server.manager.Get(path)).Where(device => !(device is null));
                 }
                 lock (devices)
                 {

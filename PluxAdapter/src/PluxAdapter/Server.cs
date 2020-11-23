@@ -16,16 +16,16 @@ namespace PluxAdapter
         public sealed class Options
         {
             [Option("ip-address", HelpText = "(Default: all network interfaces) IP to bind to.")]
-            public string IPAddress { get; set; }
+            public string IPAddress { get; private set; }
 
             [Option("port", Default = 24242, HelpText = "Port to bind to.")]
-            public int Port { get; set; }
+            public int Port { get; private set; }
 
             [Option("frequency", Default = 1000, HelpText = "Sensor update frequency.")]
-            public float Frequency { get; set; }
+            public float Frequency { get; private set; }
 
             [Option("resolution", Default = 16, HelpText = "Sensor data resolution.")]
-            public int Resolution { get; set; }
+            public int Resolution { get; private set; }
         }
 
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
