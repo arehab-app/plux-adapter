@@ -96,11 +96,14 @@ namespace PluxAdapter
                     foreach (Device device in requestedDevices)
                     {
                         List<PluxDotNet.Source> sources = device.Sources;
-                        byte[] offsets = new byte[sources.Count];
-                        int sourceCounter = 0;
-                        foreach (PluxDotNet.Source source in sources) { offsets[sourceCounter++] = (byte)(source.nBits / 8); }
+                        List<byte> offsets = new List<byte>();
+                        foreach (PluxDotNet.Source source in sources)
+                        {
+                            byte offset = (byte)(source.nBits / 8);
+                            for (int chMask = source.chMask; chMask != 0; chMask >>= 1) { if ((chMask & 1) == 1) { offsets.Add(offset); } }
+                        }
                         sortedDevices.Add(new KeyValuePair<Device, List<PluxDotNet.Source>>(device, sources));
-                        devices.Add(device, new Cache(deviceCounter++, offsets));
+                        devices.Add(device, new Cache(deviceCounter++, offsets.ToArray()));
                     }
                 }
                 response = new byte[sortedDevices.Sum(kvp => kvp.Key.path.Length + kvp.Key.Description.Length + kvp.Value.Count * 16) + sortedDevices.Count * 7 + 2];

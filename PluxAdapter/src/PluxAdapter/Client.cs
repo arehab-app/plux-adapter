@@ -116,8 +116,8 @@ namespace PluxAdapter
                             while ((received += await stream.ReadAsync(buffer, received, buffer.Length - received, source.Token)) < buffer.Length) { }
                         }
                         List<Device> devices = new List<Device>();
-                        List<byte[]> offsets = new List<byte[]>();
-                        List<byte[]> buffers = new List<byte[]>();
+                        List<byte[]> deviceOffsets = new List<byte[]>();
+                        List<byte[]> deviceBuffers = new List<byte[]>();
                         int parsed = 0;
                         while (parsed < buffer.Length)
                         {
@@ -128,6 +128,7 @@ namespace PluxAdapter
                             float frequency = BitConverter.ToSingle(buffer, parsed);
                             parsed += 4;
                             List<Source> sources = new List<Source>();
+                            List<byte> offsets = new List<byte>();
                             for (int end = buffer[parsed++] * 16 + parsed; parsed < end;)
                             {
                                 int port = BitConverter.ToInt32(buffer, parsed);
@@ -139,10 +140,16 @@ namespace PluxAdapter
                                 int chMask = BitConverter.ToInt32(buffer, parsed);
                                 parsed += 4;
                                 sources.Add(new Source(port, freqDivisor, nBits, chMask));
+                                byte offset = (byte)(nBits / 8);
+                                while (chMask != 0)
+                                {
+                                    if ((chMask & 1) == 1) { offsets.Add(offset); }
+                                    chMask >>= 1;
+                                }
                             }
                             devices.Add(new Device(path, description, frequency, sources));
-                            offsets.Add(sources.Select(source => (byte)(source.nBits / 8)).ToArray());
-                            buffers.Add(new byte[sources.Sum(source => source.nBits / 8)]);
+                            deviceOffsets.Add(offsets.ToArray());
+                            deviceBuffers.Add(new byte[offsets.Sum(offset => offset)]);
                         }
                         if (devices.Count == 0) { logger.Info("Received response with no devices"); }
                         else
@@ -163,17 +170,17 @@ namespace PluxAdapter
                             while ((received += await stream.ReadAsync(header, 0, header.Length, source.Token)) < header.Length) { }
                             byte deviceIndex = header[0];
                             int currentFrame = BitConverter.ToInt32(header, 1);
-                            byte[] offset = offsets[deviceIndex];
-                            buffer = buffers[deviceIndex];
-                            ushort[] data = new ushort[offset.Length];
+                            byte[] offsets = deviceOffsets[deviceIndex];
+                            buffer = deviceBuffers[deviceIndex];
+                            ushort[] data = new ushort[offsets.Length];
                             if (buffer.Length > 0)
                             {
                                 received = 0;
                                 while ((received += await stream.ReadAsync(buffer, 0, buffer.Length, source.Token)) < buffer.Length) { }
                                 byteIndex = 0;
-                                for (int index = 0; index < offset.Length; byteIndex += offset[index], index++)
+                                for (int index = 0; index < offsets.Length; byteIndex += offsets[index], index++)
                                 {
-                                    if (offset[index] == 1) { data[index] = buffer[byteIndex]; }
+                                    if (offsets[index] == 1) { data[index] = buffer[byteIndex]; }
                                     else { data[index] = BitConverter.ToUInt16(buffer, byteIndex); }
                                 }
                             }
