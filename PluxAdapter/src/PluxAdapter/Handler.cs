@@ -100,7 +100,7 @@ namespace PluxAdapter
                         foreach (PluxDotNet.Source source in sources)
                         {
                             byte offset = (byte)(source.nBits / 8);
-                            for (int chMask = source.chMask; chMask != 0; chMask >>= 1) { if ((chMask & 1) == 1) { offsets.Add(offset); } }
+                            for (int channelMask = source.chMask; channelMask != 0; channelMask >>= 1) { if ((channelMask & 1) == 1) { offsets.Add(offset); } }
                         }
                         sortedDevices.Add(new KeyValuePair<Device, List<PluxDotNet.Source>>(device, sources));
                         devices.Add(device, new Cache(deviceCounter++, offsets.ToArray()));
@@ -135,7 +135,7 @@ namespace PluxAdapter
                     foreach (KeyValuePair<Device, List<PluxDotNet.Source>> kvp in sortedDevices)
                     {
                         message.Append($"\n\ton {kvp.Key.path} with description: {kvp.Key.Description}, frequency: {kvp.Key.frequency} and {(kvp.Value.Count == 0 ? "no sources" : "sources:")}");
-                        foreach (PluxDotNet.Source source in kvp.Value) { message.Append($"\n\t\tport = {source.port}, freqDivisor = {source.freqDivisor}, nBits = {source.nBits}, chMask = {source.chMask}"); }
+                        foreach (PluxDotNet.Source source in kvp.Value) { message.Append($"\n\t\tport = {source.port}, frequencyDivisor = {source.freqDivisor}, resolution = {source.nBits}, channelMask = {source.chMask}"); }
                     }
                     logger.Info(message);
                 }

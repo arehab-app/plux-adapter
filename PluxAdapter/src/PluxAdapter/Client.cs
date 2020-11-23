@@ -47,16 +47,16 @@ namespace PluxAdapter
         public sealed class Source
         {
             public readonly int port;
-            public readonly int freqDivisor;
-            public readonly int nBits;
-            public readonly int chMask;
+            public readonly int frequencyDivisor;
+            public readonly int resolution;
+            public readonly int channelMask;
 
-            public Source(int port, int freqDivisor, int nBits, int chMask)
+            public Source(int port, int frequencyDivisor, int resolution, int channelMask)
             {
                 this.port = port;
-                this.freqDivisor = freqDivisor;
-                this.nBits = nBits;
-                this.chMask = chMask;
+                this.frequencyDivisor = frequencyDivisor;
+                this.resolution = resolution;
+                this.channelMask = channelMask;
             }
         }
 
@@ -133,18 +133,18 @@ namespace PluxAdapter
                             {
                                 int port = BitConverter.ToInt32(buffer, parsed);
                                 parsed += 4;
-                                int freqDivisor = BitConverter.ToInt32(buffer, parsed);
+                                int frequencyDivisor = BitConverter.ToInt32(buffer, parsed);
                                 parsed += 4;
-                                int nBits = BitConverter.ToInt32(buffer, parsed);
+                                int resolution = BitConverter.ToInt32(buffer, parsed);
                                 parsed += 4;
-                                int chMask = BitConverter.ToInt32(buffer, parsed);
+                                int channelMask = BitConverter.ToInt32(buffer, parsed);
                                 parsed += 4;
-                                sources.Add(new Source(port, freqDivisor, nBits, chMask));
-                                byte offset = (byte)(nBits / 8);
-                                while (chMask != 0)
+                                sources.Add(new Source(port, frequencyDivisor, resolution, channelMask));
+                                byte offset = (byte)(resolution / 8);
+                                while (channelMask != 0)
                                 {
-                                    if ((chMask & 1) == 1) { offsets.Add(offset); }
-                                    chMask >>= 1;
+                                    if ((channelMask & 1) == 1) { offsets.Add(offset); }
+                                    channelMask >>= 1;
                                 }
                             }
                             devices.Add(new Device(path, description, frequency, sources));
@@ -158,7 +158,7 @@ namespace PluxAdapter
                             foreach (Device device in devices)
                             {
                                 message.Append($"\n\ton {device.path} with description: {device.description}, frequency: {device.frequency} and {(device.sources.Count == 0 ? "no sources" : "sources:")}");
-                                foreach (Source source in device.sources) { message.Append($"\n\t\tport = {source.port}, freqDivisor = {source.freqDivisor}, nBits = {source.nBits}, chMask = {source.chMask}"); }
+                                foreach (Source source in device.sources) { message.Append($"\n\t\tport = {source.port}, frequencyDivisor = {source.frequencyDivisor}, resolution = {source.resolution}, channelMask = {source.channelMask}"); }
                             }
                             logger.Info(message);
                         }

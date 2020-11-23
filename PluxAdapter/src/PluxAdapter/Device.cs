@@ -22,7 +22,7 @@ namespace PluxAdapter
                 return device.source.IsCancellationRequested;
             }
 
-            public override bool OnInterrupt(object param)
+            public override bool OnInterrupt(object args)
             {
                 return device.source.IsCancellationRequested;
             }
@@ -139,7 +139,7 @@ namespace PluxAdapter
             lock (sources)
             {
                 StringBuilder message = new StringBuilder($"Starting device on {path} with description: {Description}, frequency: {frequency} and {(sources.Count == 0 ? "no sources" : "sources:")}");
-                foreach (PluxDotNet.Source source in sources) { message.Append($"\n\tport = {source.port}, freqDivisor = {source.freqDivisor}, nBits = {source.nBits}, chMask = {source.chMask}"); }
+                foreach (PluxDotNet.Source source in sources) { message.Append($"\n\tport = {source.port}, frequencyDivisor = {source.freqDivisor}, resolution = {source.nBits}, channelMask = {source.chMask}"); }
                 logger.Info(message);
             }
             using (source = new CancellationTokenSource())
