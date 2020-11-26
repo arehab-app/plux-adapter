@@ -45,6 +45,7 @@ namespace PluxAdapter
             };
             try { return await executable.Start(); }
             catch (Exception exc) { logger.Error(exc, "Something went wrong"); }
+            finally { executable.Stop(); }
             return 1;
         }
     }

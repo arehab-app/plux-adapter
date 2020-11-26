@@ -51,9 +51,9 @@ namespace PluxAdapter
             server = new TcpListener(ipAddress, options.Port);
             using (source = new CancellationTokenSource())
             {
-                server.Start();
                 try
                 {
+                    server.Start();
                     while (!source.IsCancellationRequested)
                     {
                         Handler handler = new Handler(this, await server.AcceptTcpClientAsync(), source.Token);
@@ -70,6 +70,7 @@ namespace PluxAdapter
                 }
                 catch (ObjectDisposedException) { if (!source.IsCancellationRequested) throw; }
                 catch (NullReferenceException) { if (!source.IsCancellationRequested) throw; }
+                finally { server.Stop(); }
             }
             logger.Info("Cleaning up");
             server = null;

@@ -1,6 +1,8 @@
 using System;
+using System.IO;
 using System.Text;
 using System.Threading;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
@@ -43,6 +45,8 @@ namespace PluxAdapter
         }
 
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        private static readonly long epoch = new DateTime(1970, 1, 1).Ticks;
+        private static readonly string dataDirectory = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName), "data")).FullName;
 
         public event EventHandler<FrameReceivedEventArgs> FrameReceived;
 
@@ -51,6 +55,7 @@ namespace PluxAdapter
         private int lastFrame = -1;
         private CancellationTokenSource source;
         private Plux plux;
+        private StreamWriter csv;
 
         public readonly string path;
         public readonly float frequency;
@@ -84,11 +89,12 @@ namespace PluxAdapter
         {
             FrameReceivedEventArgs eventArgs = new FrameReceivedEventArgs(lastFrame, currentFrame, data);
             FrameReceived?.Invoke(this, eventArgs);
+            csv.WriteLine($"{currentFrame},{DateTime.Now.Ticks - epoch},{String.Join(",", data)}");
             int missing = currentFrame - lastFrame;
             if (missing > 1) { logger.Warn($"Device on {path} dropped {missing - 1} frames"); }
             lastFrame = currentFrame;
-            if (eventArgs.data.Count == 0) { logger.Trace($"Received frame {eventArgs.currentFrame} from device on {path} with no data"); }
-            else { logger.Trace($"Received frame {eventArgs.currentFrame} from device on {path} with data: {String.Join(" ", eventArgs.data)}"); }
+            // if (eventArgs.data.Count == 0) { logger.Trace($"Received frame {eventArgs.currentFrame} from device on {path} with no data"); }
+            // else { logger.Trace($"Received frame {eventArgs.currentFrame} from device on {path} with data: {String.Join(" ", eventArgs.data)}"); }
         }
 
         public void Connect()
@@ -136,21 +142,34 @@ namespace PluxAdapter
 
         public void Start()
         {
+            List<string> header = new List<string>();
             lock (sources)
             {
                 StringBuilder message = new StringBuilder($"Starting device on {path} with description: {Description}, frequency: {frequency} and {(sources.Count == 0 ? "no sources" : "sources:")}");
-                foreach (PluxDotNet.Source source in sources) { message.Append($"\n\tport = {source.port}, frequencyDivisor = {source.freqDivisor}, resolution = {source.nBits}, channelMask = {source.chMask}"); }
+                foreach (PluxDotNet.Source source in sources)
+                {
+                    for (int channel = 0; (source.chMask >> channel) > 0; channel++) { if ((source.chMask & (1 << channel)) > 0) { header.Add($"{source.port}-{channel}"); } }
+                    message.Append($"\n\tport = {source.port}, frequencyDivisor = {source.freqDivisor}, resolution = {source.nBits}, channelMask = {source.chMask}");
+                }
                 logger.Info(message);
             }
+            using (plux)
+            using (csv = new StreamWriter(new FileStream(
+                Path.Combine(dataDirectory, $"PluxAdapter.{DateTime.Now:yyyy-MM-dd-HH-mm-ss-ffff}.{String.Join("-", path.Split(Path.GetInvalidFileNameChars()))}.csv"),
+                FileMode.CreateNew, FileAccess.Write, FileShare.Read, 4096, true), Encoding.ASCII, 4096, false))
             using (source = new CancellationTokenSource())
             {
-                plux?.Start(manager.frequency, Sources);
-                plux?.Loop();
-                plux?.Stop();
+                csv.WriteLine($"frame,ticks,{String.Join(",", header)}");
+                try
+                {
+                    plux?.Start(manager.frequency, Sources);
+                    plux?.Loop();
+                }
+                finally { plux?.Stop(); }
             }
             logger.Info("Cleaning up");
-            plux?.Dispose();
             plux = null;
+            csv = null;
             source = null;
             lastFrame = -1;
             lock (sources) { sources.Clear(); }
@@ -163,6 +182,7 @@ namespace PluxAdapter
             try { source?.Cancel(); }
             catch (ObjectDisposedException) { }
             try { plux?.Interrupt(null); }
+            catch (PluxDotNet.Exception.InvalidInstance) { }
             catch (PluxDotNet.Exception.InvalidOperation) { }
         }
     }

@@ -106,15 +106,7 @@ namespace PluxAdapter
                         if (options.Paths.Count() == 0) { logger.Info("Requesting all reachable paths"); }
                         else { logger.Info($"Requesting paths:\n\t{String.Join("\n\t", options.Paths)}"); }
                         await stream.WriteAsync(request, 0, request.Length, source.Token);
-                        byte[] buffer = new byte[2];
-                        int received = 0;
-                        while ((received += await stream.ReadAsync(buffer, 0, 2, source.Token)) < 2) { }
-                        buffer = new byte[BitConverter.ToUInt16(buffer, 0)];
-                        if (buffer.Length > 0)
-                        {
-                            received = 0;
-                            while ((received += await stream.ReadAsync(buffer, received, buffer.Length - received, source.Token)) < buffer.Length) { }
-                        }
+                        byte[] buffer = await stream.ReadAllAsync(BitConverter.ToUInt16(await stream.ReadAllAsync(2, source.Token), 0), source.Token);
                         List<Device> devices = new List<Device>();
                         List<byte[]> deviceOffsets = new List<byte[]>();
                         List<byte[]> deviceBuffers = new List<byte[]>();
@@ -172,23 +164,18 @@ namespace PluxAdapter
                         byte[] header = new byte[5];
                         while (!source.IsCancellationRequested)
                         {
-                            received = 0;
-                            while ((received += await stream.ReadAsync(header, 0, header.Length, source.Token)) < header.Length) { }
+                            await stream.ReadAllAsync(header, source.Token);
                             byte deviceIndex = header[0];
                             int currentFrame = BitConverter.ToInt32(header, 1);
                             byte[] offsets = deviceOffsets[deviceIndex];
                             buffer = deviceBuffers[deviceIndex];
                             ushort[] data = new ushort[offsets.Length];
-                            if (buffer.Length > 0)
+                            await stream.ReadAllAsync(buffer, source.Token);
+                            byteIndex = 0;
+                            for (int index = 0; index < offsets.Length; byteIndex += offsets[index], index++)
                             {
-                                received = 0;
-                                while ((received += await stream.ReadAsync(buffer, 0, buffer.Length, source.Token)) < buffer.Length) { }
-                                byteIndex = 0;
-                                for (int index = 0; index < offsets.Length; byteIndex += offsets[index], index++)
-                                {
-                                    if (offsets[index] == 1) { data[index] = buffer[byteIndex]; }
-                                    else { data[index] = BitConverter.ToUInt16(buffer, byteIndex); }
-                                }
+                                if (offsets[index] == 1) { data[index] = buffer[byteIndex]; }
+                                else { data[index] = BitConverter.ToUInt16(buffer, byteIndex); }
                             }
                             Device device = devices[deviceIndex];
                             FrameReceived?.Invoke(this, new FrameReceivedEventArgs(lastFrame, currentFrame, data, device));
@@ -198,8 +185,10 @@ namespace PluxAdapter
                         }
                     }
                 }
-                catch (ObjectDisposedException) { if (!source.IsCancellationRequested) throw; }
-                catch (NullReferenceException) { if (!source.IsCancellationRequested) throw; }
+                catch (ObjectDisposedException) { Stop(); if (!source.IsCancellationRequested) throw; }
+                catch (NullReferenceException) { Stop(); if (!source.IsCancellationRequested) throw; }
+                catch (System.IO.IOException) { logger.Error("Connection closed by server"); Stop(); }
+                catch (Exception) { Stop(); throw; }
             }
             logger.Info("Cleaning up");
             client = null;

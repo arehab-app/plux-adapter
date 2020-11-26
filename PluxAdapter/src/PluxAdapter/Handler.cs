@@ -43,23 +43,23 @@ namespace PluxAdapter
 
         private void SendFrame(object sender, Device.FrameReceivedEventArgs eventArgs)
         {
-            Cache cache;
-            lock (devices) { cache = devices[sender as Device]; }
-            Buffer.BlockCopy(BitConverter.GetBytes(eventArgs.currentFrame), 0, cache.buffer, 1, 4);
-            int byteIndex = 5;
-            for (int index = 0; index < cache.offsets.Length; byteIndex += cache.offsets[index], index++)
+            try
             {
-                if (cache.offsets[index] == 1) { cache.buffer[byteIndex] = (byte)eventArgs.data[index]; }
-                else { Buffer.BlockCopy(BitConverter.GetBytes((ushort)eventArgs.data[index]), 0, cache.buffer, byteIndex, 2); }
+                Cache cache;
+                lock (devices) { cache = devices[sender as Device]; }
+                Buffer.BlockCopy(BitConverter.GetBytes(eventArgs.currentFrame), 0, cache.buffer, 1, 4);
+                int byteIndex = 5;
+                for (int index = 0; index < cache.offsets.Length; byteIndex += cache.offsets[index], index++)
+                {
+                    if (cache.offsets[index] == 1) { cache.buffer[byteIndex] = (byte)eventArgs.data[index]; }
+                    else { Buffer.BlockCopy(BitConverter.GetBytes((ushort)eventArgs.data[index]), 0, cache.buffer, byteIndex, 2); }
+                }
+                lock (stream) { stream.Write(cache.buffer, 0, cache.buffer.Length); }
             }
-            try { lock (stream) { stream.Write(cache.buffer, 0, cache.buffer.Length); } }
-            catch (ObjectDisposedException) { if (!token.IsCancellationRequested) throw; }
-            catch (NullReferenceException) { if (!token.IsCancellationRequested) throw; }
-            catch (System.IO.IOException)
-            {
-                logger.Info("Connection closed by client during transfer");
-                Stop();
-            }
+            catch (ObjectDisposedException) { Stop(); if (!token.IsCancellationRequested) throw; }
+            catch (NullReferenceException) { Stop(); if (!token.IsCancellationRequested) throw; }
+            catch (System.IO.IOException) { logger.Info("Connection closed by client during transfer"); Stop(); }
+            catch (Exception) { Stop(); throw; }
         }
 
         public async Task Start()
@@ -67,14 +67,7 @@ namespace PluxAdapter
             try
             {
                 logger.Info($"Accepted connection from {client.Client.RemoteEndPoint} to {client.Client.LocalEndPoint}");
-                byte[] buffer = new byte[1];
-                while (await stream.ReadAsync(buffer, 0, 1, token) < 1) { }
-                buffer = new byte[buffer[0]];
-                if (buffer.Length > 0)
-                {
-                    int received = 0;
-                    while ((received += await stream.ReadAsync(buffer, received, buffer.Length - received, token)) < buffer.Length) { }
-                }
+                byte[] buffer = await stream.ReadAllAsync((await stream.ReadAllAsync(1, token))[0], token);
                 byte[] response;
                 string[] paths = Encoding.ASCII.GetString(buffer, 0, buffer.Length).Split(new char[] { '\0' }, StringSplitOptions.RemoveEmptyEntries);
                 List<KeyValuePair<Device, List<PluxDotNet.Source>>> sortedDevices = new List<KeyValuePair<Device, List<PluxDotNet.Source>>>();
@@ -142,13 +135,10 @@ namespace PluxAdapter
                 await stream.WriteAsync(response, 0, response.Length, token);
                 lock (devices) { foreach (Device device in devices.Keys) { device.FrameReceived += SendFrame; } }
             }
-            catch (ObjectDisposedException) { if (!token.IsCancellationRequested) throw; }
-            catch (NullReferenceException) { if (!token.IsCancellationRequested) throw; }
-            catch (System.IO.IOException)
-            {
-                logger.Info("Connection closed by client during negotiation");
-                Stop();
-            }
+            catch (ObjectDisposedException) { Stop(); if (!token.IsCancellationRequested) throw; }
+            catch (NullReferenceException) { Stop(); if (!token.IsCancellationRequested) throw; }
+            catch (System.IO.IOException) { logger.Warn("Connection closed by client during negotiation"); Stop(); }
+            catch (Exception) { Stop(); throw; }
         }
 
         public void Stop()

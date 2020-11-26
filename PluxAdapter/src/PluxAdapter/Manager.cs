@@ -32,12 +32,15 @@ namespace PluxAdapter
             catch (PluxDotNet.Exception.DeviceNotFound)
             {
                 logger.Warn("Device not found");
+                device.Stop();
                 return null;
             }
+            catch (Exception) { device.Stop(); throw; }
             tasks.Add(Task.Run(() =>
             {
                 try { device.Start(); }
                 catch (Exception exc) { logger.Error(exc, "Something went wrong"); }
+                finally { device.Stop(); }
             }));
             devices[path] = device;
             return device;
