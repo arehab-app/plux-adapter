@@ -108,6 +108,7 @@ namespace PluxAdapter
         /// <returns><see cref="int" /> indicating listening loop exit reason.</returns>
         public async Task<int> Start()
         {
+            // parse ip and create server and source
             IPAddress ipAddress = options.IPAddress is null ? IPAddress.Any : IPAddress.Parse(options.IPAddress);
             logger.Info($"Listening on {ipAddress}:{options.Port}");
             server = new TcpListener(ipAddress, options.Port);
@@ -115,12 +116,14 @@ namespace PluxAdapter
             {
                 try
                 {
+                    // start server and wait for client connections
                     server.Start();
                     while (!source.IsCancellationRequested)
                     {
                         Handler handler = new Handler(this, await server.AcceptTcpClientAsync(), source.Token);
                         lock (handlers)
                         {
+                            // client connected, register handler and execute it in parallel
                             handlers.Add(handler);
                             tasks.Add(Task.Run(async () =>
                             {
@@ -147,12 +150,15 @@ namespace PluxAdapter
         public void Stop()
         {
             logger.Info("Stopping");
+            // always cancel token first
             try { source?.Cancel(); }
             catch (ObjectDisposedException) { }
+            // stop server, handlers and manager
             server?.Stop();
             lock (handlers)
             {
                 foreach (Handler handler in handlers) { handler.Stop(); }
+                // wait for handlers to shutdown gracefully
                 Task.WaitAll(tasks.ToArray());
                 tasks.Clear();
                 handlers.Clear();

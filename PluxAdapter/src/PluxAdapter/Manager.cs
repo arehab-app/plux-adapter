@@ -58,6 +58,7 @@ namespace PluxAdapter
         private Device Connect(string path)
         {
             logger.Info($"Connecting to device on {path}");
+            // create and try to connect to device
             Device device = new Device(this, path);
             try { device.Connect(); }
             catch (PluxDotNet.Exception.DeviceNotFound)
@@ -67,6 +68,7 @@ namespace PluxAdapter
                 return null;
             }
             catch (Exception) { device.Stop(); throw; }
+            // connected, execute device in parallel and register it
             tasks.Add(Task.Run(() =>
             {
                 try { device.Start(); }
@@ -90,8 +92,10 @@ namespace PluxAdapter
             {
                 foreach (PluxDotNet.DevInfo devInfo in PluxDotNet.SignalsDev.FindDevices(domain))
                 {
+                    // already got this one
                     if (devices.ContainsKey(devInfo.path)) { continue; }
                     logger.Info($"Found new device on {devInfo.path} with description: {devInfo.description}");
+                    // something new, try to connect and register
                     Device device = Connect(devInfo.path);
                     if (!(device is null)) { found[devInfo.path] = device; }
                 }
@@ -109,7 +113,9 @@ namespace PluxAdapter
         {
             lock (devices)
             {
+                // check cache
                 if (devices.ContainsKey(path)) { return devices[path]; }
+                // nop, try to find it
                 return Connect(path);
             }
         }
@@ -122,6 +128,7 @@ namespace PluxAdapter
             logger.Info("Stopping");
             lock (devices)
             {
+                // stop devices and wait for them to shutdown gracefully
                 foreach (Device device in devices.Values) { device.Stop(); }
                 Task.WaitAll(tasks.ToArray());
                 tasks.Clear();

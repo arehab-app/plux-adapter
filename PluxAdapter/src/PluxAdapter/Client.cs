@@ -206,6 +206,7 @@ namespace PluxAdapter
         /// <returns><see cref="int" /> indicating communication loop exit reason.</returns>
         public async Task<int> Start()
         {
+            // parse ip and create client and source
             IPAddress ipAddress = IPAddress.Parse(options.IPAddress);
             logger.Info($"Connecting to {ipAddress}:{options.Port}");
             using (client = new TcpClient())
@@ -213,34 +214,45 @@ namespace PluxAdapter
             {
                 try
                 {
+                    // connect to server and grab communication stream
                     await client.ConnectAsync(ipAddress, options.Port);
                     using (NetworkStream stream = client.GetStream())
                     {
                         logger.Info($"Connected to {client.Client.RemoteEndPoint} from {client.Client.LocalEndPoint}");
+                        // allocate request buffer and write it's length
                         byte[] request = new byte[Math.Max(1, options.Paths.Sum(path => path.Length) + options.Paths.Count())];
                         request[0] = (byte)(request.Length - 1);
+                        // encode requested device paths while advancing buffer cursor
                         int byteIndex = 1;
                         foreach (string path in options.Paths) { byteIndex += Encoding.ASCII.GetBytes(path, 0, path.Length, request, byteIndex) + 1; }
+                        // log request and send to server
                         if (options.Paths.Count() == 0) { logger.Info("Requesting all reachable paths"); }
                         else { logger.Info($"Requesting paths:\n\t{String.Join("\n\t", options.Paths)}"); }
                         await stream.WriteAsync(request, 0, request.Length, source.Token);
+                        // receive response length as ushort and use that to receive response itself
                         byte[] buffer = await stream.ReadAllAsync(BitConverter.ToUInt16(await stream.ReadAllAsync(2, source.Token), 0), source.Token);
+                        // allocate lists for device configuration mirrors
                         List<Device> devices = new List<Device>();
                         List<byte[]> deviceOffsets = new List<byte[]>();
                         List<byte[]> deviceBuffers = new List<byte[]>();
+                        // decode buffer while advancing it's cursor
                         int parsed = 0;
                         while (parsed < buffer.Length)
                         {
+                            // decode device path, description and frequency
                             string path = Encoding.ASCII.GetString(buffer, parsed, Array.IndexOf(buffer, (byte)0, parsed) - parsed);
                             parsed += path.Length + 1;
                             string description = Encoding.ASCII.GetString(buffer, parsed, Array.IndexOf(buffer, (byte)0, parsed) - parsed);
                             parsed += description.Length + 1;
                             float frequency = BitConverter.ToSingle(buffer, parsed);
                             parsed += 4;
+                            // allocate lists for source configuration mirrors
                             List<Source> sources = new List<Source>();
                             List<byte> offsets = new List<byte>();
+                            // read source count and loop till source configuration end
                             for (int end = buffer[parsed++] * 16 + parsed; parsed < end;)
                             {
+                                // decode source port, frequencyDivisor, resolution and channelMask
                                 int port = BitConverter.ToInt32(buffer, parsed);
                                 parsed += 4;
                                 int frequencyDivisor = BitConverter.ToInt32(buffer, parsed);
@@ -249,6 +261,7 @@ namespace PluxAdapter
                                 parsed += 4;
                                 int channelMask = BitConverter.ToInt32(buffer, parsed);
                                 parsed += 4;
+                                // add source and it's channel offsets
                                 sources.Add(new Source(port, frequencyDivisor, resolution, channelMask));
                                 byte offset = (byte)(resolution / 8);
                                 while (channelMask != 0)
@@ -257,10 +270,13 @@ namespace PluxAdapter
                                     channelMask >>= 1;
                                 }
                             }
+                            // add device and offsets
                             devices.Add(new Device(path, description, frequency, sources));
                             deviceOffsets.Add(offsets.ToArray());
+                            // allocate device specific receive buffer
                             deviceBuffers.Add(new byte[offsets.Sum(offset => offset)]);
                         }
+                        // log response
                         if (devices.Count == 0) { logger.Info("Received response with no devices"); }
                         else
                         {
@@ -272,31 +288,43 @@ namespace PluxAdapter
                             }
                             logger.Info(message);
                         }
+                        // requested all available devices, but server has none, return
                         if (options.Paths.Count() == 0) { if (devices.Count == 0) { return 0; } }
+                        // requested something, didn't get it, fail
                         else if (!options.Paths.SequenceEqual(devices.Select(device => device.path)))
                         {
                             logger.Error("Received wrong devices");
                             return 1;
                         }
+                        // got what was requested, allocate buffer for raw data transfer header and enter receive loop
                         int lastFrame = -1;
                         byte[] header = new byte[5];
                         while (!source.IsCancellationRequested)
                         {
+                            // receive header
                             await stream.ReadAllAsync(header, source.Token);
+                            // decode device index and frame counter
                             byte deviceIndex = header[0];
                             int currentFrame = BitConverter.ToInt32(header, 1);
+                            // grab device specific offsets and buffer
                             byte[] offsets = deviceOffsets[deviceIndex];
                             buffer = deviceBuffers[deviceIndex];
+                            // allocate raw data buffer
                             ushort[] data = new ushort[offsets.Length];
+                            // receive raw data
                             await stream.ReadAllAsync(buffer, source.Token);
+                            // loop over offsets while advancing buffer cursor
                             byteIndex = 0;
                             for (int index = 0; index < offsets.Length; byteIndex += offsets[index], index++)
                             {
+                                // decode raw data as byte or ushort
                                 if (offsets[index] == 1) { data[index] = buffer[byteIndex]; }
                                 else { data[index] = BitConverter.ToUInt16(buffer, byteIndex); }
                             }
+                            // grab device and distribute raw data
                             Device device = devices[deviceIndex];
                             FrameReceived?.Invoke(this, new FrameReceivedEventArgs(lastFrame, currentFrame, data, device));
+                            // log missing frames
                             int missing = currentFrame - lastFrame;
                             if (missing > 1) { logger.Warn($"Device on {device.path} dropped {missing - 1} frames"); }
                             lastFrame = currentFrame;
@@ -321,8 +349,10 @@ namespace PluxAdapter
         public void Stop()
         {
             logger.Info("Stopping");
+            // always cancel token first
             try { source?.Cancel(); }
             catch (ObjectDisposedException) { }
+            // close connection
             client?.Close();
         }
     }

@@ -37,7 +37,9 @@ namespace PluxAdapter
             public Cache(byte index, byte[] offsets)
             {
                 this.offsets = offsets;
+                // allocate room for device index, frame counter and raw data
                 this.buffer = new byte[offsets.Sum(offset => offset) + 5];
+                // write device index, note that this is static for each cache
                 buffer[0] = index;
             }
         }
@@ -89,17 +91,22 @@ namespace PluxAdapter
         /// <param name="eventArgs"><see cref="PluxAdapter.Device.FrameReceivedEventArgs" /> containing event data.</param>
         private void SendFrame(object sender, Device.FrameReceivedEventArgs eventArgs)
         {
+            // note that this method is called from device specific loop, therefore overwriting device specific buffer is ok
             try
             {
+                // grab device cache and write frame counter
                 Cache cache;
                 lock (devices) { cache = devices[sender as Device]; }
                 Buffer.BlockCopy(BitConverter.GetBytes(eventArgs.currentFrame), 0, cache.buffer, 1, 4);
+                // loop over offsets while advancing buffer cursor
                 int byteIndex = 5;
                 for (int index = 0; index < cache.offsets.Length; byteIndex += cache.offsets[index], index++)
                 {
+                    // write raw data as byte or ushort
                     if (cache.offsets[index] == 1) { cache.buffer[byteIndex] = (byte)eventArgs.data[index]; }
                     else { Buffer.BlockCopy(BitConverter.GetBytes((ushort)eventArgs.data[index]), 0, cache.buffer, byteIndex, 2); }
                 }
+                // send to client
                 lock (stream) { stream.Write(cache.buffer, 0, cache.buffer.Length); }
             }
             catch (ObjectDisposedException) { Stop(); if (!token.IsCancellationRequested) throw; }
@@ -117,22 +124,28 @@ namespace PluxAdapter
             try
             {
                 logger.Info($"Accepted connection from {client.Client.RemoteEndPoint} to {client.Client.LocalEndPoint}");
+                // receive request length as single byte and use that to receive request itself
                 byte[] buffer = await stream.ReadAllAsync((await stream.ReadAllAsync(1, token))[0], token);
                 byte[] response;
+                // decode requested paths
                 string[] paths = Encoding.ASCII.GetString(buffer, 0, buffer.Length).Split(new char[] { '\0' }, StringSplitOptions.RemoveEmptyEntries);
+                // keep devices in order requested since that determines client specific device index
                 List<KeyValuePair<Device, List<PluxDotNet.Source>>> sortedDevices = new List<KeyValuePair<Device, List<PluxDotNet.Source>>>();
                 IEnumerable<Device> requestedDevices;
                 if (paths.Length == 0)
                 {
                     logger.Info("Received request for all reachable paths");
+                    // nothing specific requested, scan for anything new and return all we got
                     server.manager.Scan("");
                     requestedDevices = server.manager.Devices.Values;
                 }
                 else
                 {
                     logger.Info($"Received request for paths:\n\t{String.Join("\n\t", paths)}");
+                    // try to get all requested devices, note that we may not be able to acquire them all, doesn't bother us, client might though
                     requestedDevices = paths.Select(path => server.manager.Get(path)).Where(device => !(device is null));
                 }
+                // loop requested devices and their sources
                 lock (devices)
                 {
                     byte deviceCounter = 0;
@@ -142,18 +155,23 @@ namespace PluxAdapter
                         List<byte> offsets = new List<byte>();
                         foreach (PluxDotNet.Source source in sources)
                         {
+                            // add offset for each channel used
                             byte offset = (byte)(source.nBits / 8);
                             for (int channelMask = source.chMask; channelMask != 0; channelMask >>= 1) { if ((channelMask & 1) == 1) { offsets.Add(offset); } }
                         }
+                        // add device and it's cache
                         sortedDevices.Add(new KeyValuePair<Device, List<PluxDotNet.Source>>(device, sources));
                         devices.Add(device, new Cache(deviceCounter++, offsets.ToArray()));
                     }
                 }
+                // allocate response buffer and write it's length
                 response = new byte[sortedDevices.Sum(kvp => kvp.Key.path.Length + kvp.Key.Description.Length + kvp.Value.Count * 16) + sortedDevices.Count * 7 + 2];
                 Buffer.BlockCopy(BitConverter.GetBytes((ushort)(response.Length - 2)), 0, response, 0, 2);
+                // loop devices and their sources in order while advancing buffer cursor
                 int byteIndex = 2;
                 foreach (KeyValuePair<Device, List<PluxDotNet.Source>> kvp in sortedDevices)
                 {
+                    // encode device path, description, frequency and source count
                     byteIndex += Encoding.ASCII.GetBytes(kvp.Key.path, 0, kvp.Key.path.Length, response, byteIndex) + 1;
                     byteIndex += Encoding.ASCII.GetBytes(kvp.Key.Description, 0, kvp.Key.Description.Length, response, byteIndex) + 1;
                     Buffer.BlockCopy(BitConverter.GetBytes(kvp.Key.frequency), 0, response, byteIndex, 4);
@@ -161,6 +179,7 @@ namespace PluxAdapter
                     response[byteIndex++] = (byte)kvp.Value.Count;
                     foreach (PluxDotNet.Source source in kvp.Value)
                     {
+                        // encode source port, freqDivisor, nBits and chMask
                         Buffer.BlockCopy(BitConverter.GetBytes(source.port), 0, response, byteIndex, 4);
                         byteIndex += 4;
                         Buffer.BlockCopy(BitConverter.GetBytes(source.freqDivisor), 0, response, byteIndex, 4);
@@ -171,6 +190,7 @@ namespace PluxAdapter
                         byteIndex += 4;
                     }
                 }
+                // log response
                 if (sortedDevices.Count == 0) { logger.Info("Responding with no devices"); }
                 else
                 {
@@ -182,6 +202,7 @@ namespace PluxAdapter
                     }
                     logger.Info(message);
                 }
+                // send to client and register callback
                 await stream.WriteAsync(response, 0, response.Length, token);
                 lock (devices) { foreach (Device device in devices.Keys) { device.FrameReceived += SendFrame; } }
             }
@@ -196,8 +217,10 @@ namespace PluxAdapter
         /// </summary>
         public void Stop()
         {
+            // note that log may fail if connection was already closed
             try { logger.Info($"Stopping connection from {client.Client.RemoteEndPoint} to {client.Client.LocalEndPoint}"); }
             catch (ObjectDisposedException) { }
+            // close connection and unregister callback
             client.Close();
             lock (devices)
             {

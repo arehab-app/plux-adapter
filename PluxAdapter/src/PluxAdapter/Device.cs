@@ -40,6 +40,7 @@ namespace PluxAdapter
             /// <returns>Indicator if <see cref="PluxDotNet.BaseDev.Loop" /> should stop.</returns>
             public override bool OnRawFrame(int currentFrame, int[] data)
             {
+                // forward raw data to device
                 device.OnRawFrame(currentFrame, data);
                 return device.source.IsCancellationRequested;
             }
@@ -182,12 +183,16 @@ namespace PluxAdapter
         /// <param name="data">Raw data.</param>
         private void OnRawFrame(int currentFrame, int[] data)
         {
+            // distribute raw data
             FrameReceivedEventArgs eventArgs = new FrameReceivedEventArgs(lastFrame, currentFrame, data);
             FrameReceived?.Invoke(this, eventArgs);
+            // write to csv
             csv.WriteLine($"{currentFrame},{DateTime.Now.Ticks - epoch},{String.Join(",", data)}");
+            // log missing frames
             int missing = currentFrame - lastFrame;
             if (missing > 1) { logger.Warn($"Device on {path} dropped {missing - 1} frames"); }
             lastFrame = currentFrame;
+            // log raw data
             // if (eventArgs.data.Count == 0) { logger.Trace($"Received frame {eventArgs.currentFrame} from device on {path} with no data"); }
             // else { logger.Trace($"Received frame {eventArgs.currentFrame} from device on {path} with data: {String.Join(" ", eventArgs.data)}"); }
         }
@@ -197,16 +202,19 @@ namespace PluxAdapter
         /// </summary>
         public void Connect()
         {
+            // connect to underlying device and log it's properties
             plux = new Plux(path, this);
             StringBuilder message = new StringBuilder($"Connected to device on {path} with properties:");
             Dictionary<string, object> properties = plux.GetProperties();
             foreach (KeyValuePair<string, object> kvp in properties) { message.Append($"\n\t{kvp.Key} = {kvp.Value}"); }
             logger.Info(message);
+            // need description to know how to configure it
             if (!properties.ContainsKey("description"))
             {
                 logger.Warn($"Device on {path} has no description");
                 return;
             }
+            // got description, grab and switch on it
             Description = properties["description"].ToString();
             lock (sources)
             {
@@ -233,6 +241,7 @@ namespace PluxAdapter
                         break;
                     default:
                         logger.Warn($"Device on {path} has unknown description: {Description}");
+                        // note that device with no sources works, but it's somewhat useless
                         break;
                 }
             }
@@ -243,26 +252,31 @@ namespace PluxAdapter
         /// </summary>
         public void Start()
         {
+            // allocate and fill csv header while logging device configuration
             List<string> header = new List<string>();
             lock (sources)
             {
                 StringBuilder message = new StringBuilder($"Starting device on {path} with description: {Description}, frequency: {frequency} and {(sources.Count == 0 ? "no sources" : "sources:")}");
                 foreach (PluxDotNet.Source source in sources)
                 {
+                    // add column header for each open channel on port
                     for (int channel = 0; (source.chMask >> channel) > 0; channel++) { if ((source.chMask & (1 << channel)) > 0) { header.Add($"{source.port}-{channel}"); } }
                     message.Append($"\n\tport = {source.port}, frequencyDivisor = {source.freqDivisor}, resolution = {source.nBits}, channelMask = {source.chMask}");
                 }
                 logger.Info(message);
             }
             using (plux)
+            // open csv file for writing, note that this'll fail if file already exists, but given time resolution used that's very unlikely
             using (csv = new StreamWriter(new FileStream(
                 Path.Combine(dataDirectory, $"PluxAdapter.{DateTime.Now:yyyy-MM-dd-HH-mm-ss-ffff}.{String.Join("-", path.Split(Path.GetInvalidFileNameChars()))}.csv"),
                 FileMode.CreateNew, FileAccess.Write, FileShare.Read, 4096, true), Encoding.ASCII, 4096, false))
             using (source = new CancellationTokenSource())
             {
+                // write csv header
                 csv.WriteLine($"frame,ticks,{String.Join(",", header)}");
                 try
                 {
+                    // start raw data transfer and enter communication loop
                     plux?.Start(manager.frequency, Sources);
                     plux?.Loop();
                 }
@@ -283,8 +297,10 @@ namespace PluxAdapter
         public void Stop()
         {
             logger.Info($"Stopping device on {path}");
+            // always cancel token first
             try { source?.Cancel(); }
             catch (ObjectDisposedException) { }
+            // interrupt communication loop
             try { plux?.Interrupt(null); }
             catch (PluxDotNet.Exception.InvalidInstance) { }
             catch (PluxDotNet.Exception.InvalidOperation) { }
