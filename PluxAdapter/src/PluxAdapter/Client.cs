@@ -28,19 +28,32 @@ namespace PluxAdapter
             /// IP to connect to.
             /// </summary>
             [Option("ip-address", Default = "127.0.0.1", HelpText = "IP to connect to.")]
-            public string IPAddress { get; private set; }
+            public string IPAddress { get; }
 
             /// <summary>
             /// Port to connect to.
             /// </summary>
             [Option("port", Default = 24242, HelpText = "Port to connect to.")]
-            public int Port { get; private set; }
+            public int Port { get; }
 
             /// <summary>
             /// Paths of devices to request.
             /// </summary>
             [Option("paths", HelpText = "(Default: all reachable paths) Paths of devices to request.")]
-            public IEnumerable<string> Paths { get; private set; }
+            public IEnumerable<string> Paths { get; }
+
+            /// <summary>
+            /// Creates new <see cref="PluxAdapter.Client.Options" />.
+            /// </summary>
+            /// <param name="ipAddress">IP to connect to.</param>
+            /// <param name="port">Port to connect to.</param>
+            /// <param name="paths">Paths of devices to request.</param>
+            public Options(string ipAddress, int port, IEnumerable<string> paths)
+            {
+                IPAddress = ipAddress;
+                Port = port;
+                Paths = paths.ToList().AsReadOnly();
+            }
         }
 
         /// <summary>
@@ -168,10 +181,6 @@ namespace PluxAdapter
         public event EventHandler<FrameReceivedEventArgs> FrameReceived;
 
         /// <summary>
-        /// Configuration options.
-        /// </summary>
-        private readonly Options options;
-        /// <summary>
         /// Underlying connection.
         /// </summary>
         private TcpClient client;
@@ -179,6 +188,11 @@ namespace PluxAdapter
         /// <see cref="System.Threading.CancellationTokenSource" /> monitored by <see cref="PluxAdapter.Client" />.
         /// </summary>
         private CancellationTokenSource source;
+
+        /// <summary>
+        /// Configuration options.
+        /// </summary>
+        public readonly Options options;
 
         /// <summary>
         /// Creates new <see cref="PluxAdapter.Client" /> with <see cref="PluxAdapter.Client.Options" />.

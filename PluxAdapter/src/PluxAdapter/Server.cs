@@ -25,25 +25,40 @@ namespace PluxAdapter
             /// IP to bind to.
             /// </summary>
             [Option("ip-address", HelpText = "(Default: all network interfaces) IP to bind to.")]
-            public string IPAddress { get; private set; }
+            public string IPAddress { get; }
 
             /// <summary>
             /// Port to bind to.
             /// </summary>
             [Option("port", Default = 24242, HelpText = "Port to bind to.")]
-            public int Port { get; private set; }
+            public int Port { get; }
 
             /// <summary>
             /// Sensor update frequency.
             /// </summary>
             [Option("frequency", Default = 1000, HelpText = "Sensor update frequency.")]
-            public float Frequency { get; private set; }
+            public float Frequency { get; }
 
             /// <summary>
             /// Sensor data resolution.
             /// </summary>
             [Option("resolution", Default = 16, HelpText = "Sensor data resolution.")]
-            public int Resolution { get; private set; }
+            public int Resolution { get; }
+
+            /// <summary>
+            /// Creates new <see cref="PluxAdapter.Server.Options" />.
+            /// </summary>
+            /// <param name="ipAddress">IP to bind to.</param>
+            /// <param name="port">Port to bind to.</param>
+            /// <param name="frequency">Sensor update frequency.</param>
+            /// <param name="resolution">Sensor data resolution.</param>
+            public Options(string ipAddress, int port, float frequency, int resolution)
+            {
+                IPAddress = ipAddress;
+                Port = port;
+                Frequency = frequency;
+                Resolution = resolution;
+            }
         }
 
         /// <summary>
@@ -60,10 +75,6 @@ namespace PluxAdapter
         /// </summary>
         private readonly List<Task> tasks = new List<Task>();
         /// <summary>
-        /// Configuration options.
-        /// </summary>
-        private readonly Options options;
-        /// <summary>
         /// Underlying listener.
         /// </summary>
         private TcpListener server;
@@ -72,6 +83,10 @@ namespace PluxAdapter
         /// </summary>
         private CancellationTokenSource source;
 
+        /// <summary>
+        /// Configuration options.
+        /// </summary>
+        public readonly Options options;
         /// <summary>
         /// <see cref="PluxAdapter.Manager" /> used to manage <see cref="PluxAdapter.Device" />.
         /// </summary>
