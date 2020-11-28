@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 using NLog;
 using CommandLine;
 
+using PluxAdapter.Servers;
+using PluxAdapter.Clients;
+
 namespace PluxAdapter
 {
     /// <summary>
@@ -11,22 +14,6 @@ namespace PluxAdapter
     /// </summary>
     public static class Program
     {
-        /// <summary>
-        /// Executable command.
-        /// </summary>
-        public interface IExecutable
-        {
-            /// <summary>
-            /// Runs <see cref="PluxAdapter.Program.IExecutable" /> loop.
-            /// </summary>
-            /// <returns><see cref="int" /> indicating <see cref="PluxAdapter.Program.IExecutable" /> loop exit reason.</returns>
-            Task<int> Start();
-            /// <summary>
-            /// Stops <see cref="PluxAdapter.Program.IExecutable" />. This is threadsafe.
-            /// </summary>
-            void Stop();
-        }
-
         /// <summary>
         /// <see cref="NLog.Logger" /> used by <see cref="PluxAdapter.Program" />.
         /// </summary>

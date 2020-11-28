@@ -2,18 +2,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Launch",
+            "name": ".NET Launch Server",
             "type": "clr",
             "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceFolder}/PluxAdapter/bin/Debug/net451/PluxAdapter.exe",
+            "preLaunchTask": "build server",
+            "program": "${workspaceFolder}/PluxAdapter/Servers/bin/Debug/net451/PluxAdapter.exe",
             "args": [],
-            "cwd": "${workspaceFolder}/PluxAdapter/bin/Debug/net451",
+            "cwd": "${workspaceFolder}/PluxAdapter/Servers/bin/Debug/net451",
             "console": "internalConsole",
             "stopAtEntry": false
         },
         {
-            "name": ".NET Attach",
+            "name": ".NET Attach Server",
             "type": "clr",
             "request": "attach",
             "processId": "${command:pickProcess}"

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net451</TargetFramework>
+    <DebugType>portable</DebugType>
+    <ProcessorArchitecture>amd64</ProcessorArchitecture>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="PluxAdapter.Servers.exe.nlog" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="PluxAdapter" HintPath="./lib/PluxAdapter/PluxAdapter.Clients.dll" />
+    <Reference Include="PluxDotNet" HintPath="./lib/PluxDotNet/plux.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NLog" Version="4.7.5" />
+    <PackageReference Include="CommandLineParser" Version="2.8.0" />
+  </ItemGroup>
+
+</Project>

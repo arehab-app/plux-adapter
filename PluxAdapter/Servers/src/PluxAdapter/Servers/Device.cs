@@ -8,28 +8,28 @@ using System.Collections.ObjectModel;
 
 using NLog;
 
-namespace PluxAdapter
+namespace PluxAdapter.Servers
 {
     /// <summary>
-    /// Manages connection to and distributes raw data from <see cref="PluxAdapter.Device.Plux" />.
+    /// Manages connection to and distributes raw data from <see cref="PluxAdapter.Servers.Device.Plux" />.
     /// </summary>
     public sealed class Device
     {
         /// <summary>
-        /// Extension of <see cref="PluxDotNet.SignalsDev" /> communicating with <see cref="PluxAdapter.Device" />.
+        /// Extension of <see cref="PluxDotNet.SignalsDev" /> communicating with <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         private sealed class Plux : PluxDotNet.SignalsDev
         {
             /// <summary>
-            /// <see cref="PluxAdapter.Device" /> managing <see cref="PluxAdapter.Device.Plux" />.
+            /// <see cref="PluxAdapter.Servers.Device" /> managing <see cref="PluxAdapter.Servers.Device.Plux" />.
             /// </summary>
             private readonly Device device;
 
             /// <summary>
-            /// Creates new <see cref="PluxAdapter.Device.Plux" /> on <paramref name="path" /> managed by <paramref name="device" />.
+            /// Creates new <see cref="PluxAdapter.Servers.Device.Plux" /> on <paramref name="path" /> managed by <paramref name="device" />.
             /// </summary>
-            /// <param name="path"><see cref="PluxAdapter.Device" /> managing <see cref="PluxAdapter.Device.Plux" />.</param>
-            /// <param name="device">Path to <see cref="PluxAdapter.Device.Plux" />.</param>
+            /// <param name="path"><see cref="PluxAdapter.Servers.Device" /> managing <see cref="PluxAdapter.Servers.Device.Plux" />.</param>
+            /// <param name="device">Path to <see cref="PluxAdapter.Servers.Device.Plux" />.</param>
             public Plux(string path, Device device) : base(path) { this.device = device; }
 
             /// <summary>
@@ -57,12 +57,12 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Event data for <see cref="PluxAdapter.Device.FrameReceived" />.
+        /// Event data for <see cref="PluxAdapter.Servers.Device.FrameReceived" />.
         /// </summary>
         public sealed class FrameReceivedEventArgs : EventArgs
         {
             /// <summary>
-            /// Counter of last frame received by <see cref="PluxAdapter.Device" />.
+            /// Counter of last frame received by <see cref="PluxAdapter.Servers.Device" />.
             /// </summary>
             public readonly int lastFrame;
             /// <summary>
@@ -70,14 +70,14 @@ namespace PluxAdapter
             /// </summary>
             public readonly int currentFrame;
             /// <summary>
-            /// Raw data from <see cref="PluxAdapter.Device" />.
+            /// Raw data from <see cref="PluxAdapter.Servers.Device" />.
             /// </summary>
             public readonly ReadOnlyCollection<int> data;
 
             /// <summary>
-            /// Creates new <see cref="PluxAdapter.Device.FrameReceivedEventArgs" />.
+            /// Creates new <see cref="PluxAdapter.Servers.Device.FrameReceivedEventArgs" />.
             /// </summary>
-            /// <param name="lastFrame">Counter of last frame received by <see cref="PluxAdapter.Device" />.</param>
+            /// <param name="lastFrame">Counter of last frame received by <see cref="PluxAdapter.Servers.Device" />.</param>
             /// <param name="currentFrame">Counter of this frame.</param>
             /// <param name="data">Raw data.</param>
             public FrameReceivedEventArgs(int lastFrame, int currentFrame, int[] data)
@@ -89,7 +89,7 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// <see cref="NLog.Logger" /> used by <see cref="PluxAdapter.Device" />.
+        /// <see cref="NLog.Logger" /> used by <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         /// <summary>
@@ -107,11 +107,11 @@ namespace PluxAdapter
         public event EventHandler<FrameReceivedEventArgs> FrameReceived;
 
         /// <summary>
-        /// <see cref="PluxDotNet.Source" /> providing data to <see cref="PluxAdapter.Device" />.
+        /// <see cref="PluxDotNet.Source" /> providing data to <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         private readonly List<PluxDotNet.Source> sources = new List<PluxDotNet.Source>();
         /// <summary>
-        /// <see cref="PluxAdapter.Manager" /> managing <see cref="PluxAdapter.Device" />.
+        /// <see cref="PluxAdapter.Servers.Manager" /> managing <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         private readonly Manager manager;
         /// <summary>
@@ -119,7 +119,7 @@ namespace PluxAdapter
         /// </summary>
         private int lastFrame = -1;
         /// <summary>
-        /// <see cref="System.Threading.CancellationTokenSource" /> monitored by <see cref="PluxAdapter.Device" />.
+        /// <see cref="System.Threading.CancellationTokenSource" /> monitored by <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         private CancellationTokenSource source;
         /// <summary>
@@ -132,21 +132,21 @@ namespace PluxAdapter
         private StreamWriter csv;
 
         /// <summary>
-        /// Path <see cref="PluxAdapter.Device" /> is located on.
+        /// Path <see cref="PluxAdapter.Servers.Device" /> is located on.
         /// </summary>
         public readonly string path;
         /// <summary>
-        /// Connection base frequency for <see cref="PluxAdapter.Device" />.
+        /// Connection base frequency for <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         public readonly float frequency;
 
         /// <summary>
-        /// Description of <see cref="PluxAdapter.Device" />.
+        /// Description of <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         public string Description { get; private set; }
 
         /// <summary>
-        /// <see cref="PluxDotNet.Source" /> providing data to <see cref="PluxAdapter.Device" />. This is threadsafe.
+        /// <see cref="PluxDotNet.Source" /> providing data to <see cref="PluxAdapter.Servers.Device" />. This is threadsafe.
         /// </summary>
         public List<PluxDotNet.Source> Sources
         {
@@ -165,10 +165,10 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Creates new <see cref="PluxAdapter.Device" /> on <paramref name="path" /> managed by <paramref name="manager" />.
+        /// Creates new <see cref="PluxAdapter.Servers.Device" /> on <paramref name="path" /> managed by <paramref name="manager" />.
         /// </summary>
-        /// <param name="manager"><see cref="PluxAdapter.Manager" /> managing <see cref="PluxAdapter.Device" />.</param>
-        /// <param name="path">Path to <see cref="PluxAdapter.Device" />.</param>
+        /// <param name="manager"><see cref="PluxAdapter.Servers.Manager" /> managing <see cref="PluxAdapter.Servers.Device" />.</param>
+        /// <param name="path">Path to <see cref="PluxAdapter.Servers.Device" />.</param>
         public Device(Manager manager, string path)
         {
             this.manager = manager;
@@ -177,7 +177,7 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Receives and distributes data from <see cref="PluxAdapter.Device.plux" />.
+        /// Receives and distributes data from <see cref="PluxAdapter.Servers.Device.plux" />.
         /// </summary>
         /// <param name="currentFrame">Frame counter.</param>
         /// <param name="data">Raw data.</param>
@@ -198,7 +198,7 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Connects to and configures <see cref="PluxAdapter.Device" />. This must be called before <see cref="PluxAdapter.Device.Start" />.
+        /// Connects to and configures <see cref="PluxAdapter.Servers.Device" />. This must be called before <see cref="PluxAdapter.Servers.Device.Start" />.
         /// </summary>
         public void Connect()
         {
@@ -248,7 +248,7 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Runs <see cref="PluxAdapter.Device" /> communication loop. This must be called after <see cref="PluxAdapter.Device.Connect" />.
+        /// Runs <see cref="PluxAdapter.Servers.Device" /> communication loop. This must be called after <see cref="PluxAdapter.Servers.Device.Connect" />.
         /// </summary>
         public void Start()
         {
@@ -292,7 +292,7 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Stops <see cref="PluxAdapter.Device" /> communication loop. This is threadsafe.
+        /// Stops <see cref="PluxAdapter.Servers.Device" /> communication loop. This is threadsafe.
         /// </summary>
         public void Stop()
         {

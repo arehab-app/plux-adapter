@@ -4,46 +4,46 @@ using System.Collections.Generic;
 
 using NLog;
 
-namespace PluxAdapter
+namespace PluxAdapter.Servers
 {
     /// <summary>
-    /// Manages <see cref="PluxAdapter.Device" /> connections. All public members are threadsafe.
+    /// Manages <see cref="PluxAdapter.Servers.Device" /> connections. All public members are threadsafe.
     /// </summary>
     public sealed class Manager
     {
         /// <summary>
-        /// <see cref="NLog.Logger" /> used by <see cref="PluxAdapter.Manager" />.
+        /// <see cref="NLog.Logger" /> used by <see cref="PluxAdapter.Servers.Manager" />.
         /// </summary>
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
-        /// Managed <see cref="PluxAdapter.Device" /> mapped to path.
+        /// Managed <see cref="PluxAdapter.Servers.Device" /> mapped to path.
         /// </summary>
         private readonly Dictionary<string, Device> devices = new Dictionary<string, Device>();
         /// <summary>
-        /// Parallel <see cref="System.Threading.Tasks.Task" /> used for managed <see cref="PluxAdapter.Device" />.
+        /// Parallel <see cref="System.Threading.Tasks.Task" /> used for managed <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         private readonly List<Task> tasks = new List<Task>();
 
         /// <summary>
-        /// Connection base frequency for connected <see cref="PluxAdapter.Device" />.
+        /// Connection base frequency for connected <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         public readonly float frequency;
         /// <summary>
-        /// Data resolution for connected <see cref="PluxAdapter.Device" />.
+        /// Data resolution for connected <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         public readonly int resolution;
 
         /// <summary>
-        /// Managed <see cref="PluxAdapter.Device" />. This is threadsafe.
+        /// Managed <see cref="PluxAdapter.Servers.Device" />. This is threadsafe.
         /// </summary>
         public Dictionary<string, Device> Devices { get { lock (devices) { return new Dictionary<string, Device>(devices); } } }
 
         /// <summary>
-        /// Creates new <see cref="PluxAdapter.Manager" /> with <see cref="PluxAdapter.Device" /> connection base <paramref name="frequency" /> and data <paramref name="resolution" />.
+        /// Creates new <see cref="PluxAdapter.Servers.Manager" /> with <see cref="PluxAdapter.Servers.Device" /> connection base <paramref name="frequency" /> and data <paramref name="resolution" />.
         /// </summary>
-        /// <param name="frequency">Base frequency for newly connected <see cref="PluxAdapter.Device" /> to use.</param>
-        /// <param name="resolution">Data resolution for newly connected <see cref="PluxAdapter.Device" /> to use.</param>
+        /// <param name="frequency">Base frequency for newly connected <see cref="PluxAdapter.Servers.Device" /> to use.</param>
+        /// <param name="resolution">Data resolution for newly connected <see cref="PluxAdapter.Servers.Device" /> to use.</param>
         public Manager(float frequency, int resolution)
         {
             this.frequency = frequency;
@@ -51,10 +51,10 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Attempts to connect to <see cref="PluxAdapter.Device" /> on <paramref name="path" />.
+        /// Attempts to connect to <see cref="PluxAdapter.Servers.Device" /> on <paramref name="path" />.
         /// </summary>
-        /// <param name="path">Path to look for <see cref="PluxAdapter.Device" /> on.</param>
-        /// <returns>Already connected <see cref="PluxAdapter.Device" /> or <see langword="null" /> if nothing was found.</returns>
+        /// <param name="path">Path to look for <see cref="PluxAdapter.Servers.Device" /> on.</param>
+        /// <returns>Already connected <see cref="PluxAdapter.Servers.Device" /> or <see langword="null" /> if nothing was found.</returns>
         private Device Connect(string path)
         {
             logger.Info($"Connecting to device on {path}");
@@ -64,6 +64,18 @@ namespace PluxAdapter
             catch (PluxDotNet.Exception.DeviceNotFound)
             {
                 logger.Warn("Device not found");
+                device.Stop();
+                return null;
+            }
+            catch (PluxDotNet.Exception.InvalidParameter)
+            {
+                logger.Warn("Invalid path");
+                device.Stop();
+                return null;
+            }
+            catch (PluxDotNet.Exception.AdapterNotFound)
+            {
+                logger.Warn("Bluetooth not found");
                 device.Stop();
                 return null;
             }
@@ -80,10 +92,10 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Scans for <see cref="PluxAdapter.Device" /> in <paramref name="domain" />. This is threadsafe.
+        /// Scans for <see cref="PluxAdapter.Servers.Device" /> in <paramref name="domain" />. This is threadsafe.
         /// </summary>
         /// <param name="domain">Domain to scan.</param>
-        /// <returns>Newly found <see cref="PluxAdapter.Device" /> mapped to path.</returns>
+        /// <returns>Newly found <see cref="PluxAdapter.Servers.Device" /> mapped to path.</returns>
         public Dictionary<string, Device> Scan(string domain)
         {
             logger.Info($"Scanning for new devices in {(domain.Length == 0 ? "all domains" : domain)}");
@@ -105,10 +117,10 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Gets connected <see cref="PluxAdapter.Device" /> on <paramref name="path" />. <see cref="PluxAdapter.Device" /> may be returned from cache if it was requested before. This is threadsafe.
+        /// Gets connected <see cref="PluxAdapter.Servers.Device" /> on <paramref name="path" />. <see cref="PluxAdapter.Servers.Device" /> may be returned from cache if it was requested before. This is threadsafe.
         /// </summary>
-        /// <param name="path">Path to look for <see cref="PluxAdapter.Device" /> on.</param>
-        /// <returns>Already connected <see cref="PluxAdapter.Device" /> or <see langword="null" /> if nothing was found.</returns>
+        /// <param name="path">Path to look for <see cref="PluxAdapter.Servers.Device" /> on.</param>
+        /// <returns>Already connected <see cref="PluxAdapter.Servers.Device" /> or <see langword="null" /> if nothing was found.</returns>
         public Device Get(string path)
         {
             lock (devices)
@@ -121,7 +133,7 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Stops <see cref="PluxAdapter.Manager" /> and it's monitored <see cref="PluxAdapter.Manager.devices" /> and <see cref="PluxAdapter.Manager.tasks" />. This is threadsafe.
+        /// Stops <see cref="PluxAdapter.Servers.Manager" /> and it's monitored <see cref="PluxAdapter.Servers.Manager.devices" /> and <see cref="PluxAdapter.Servers.Manager.tasks" />. This is threadsafe.
         /// </summary>
         public void Stop()
         {

@@ -8,32 +8,32 @@ using System.Collections.Generic;
 
 using NLog;
 
-namespace PluxAdapter
+namespace PluxAdapter.Servers
 {
     /// <summary>
-    /// Handles <see cref="PluxAdapter.Client" /> connected to <see cref="PluxAdapter.Server" />, negotiates requests and transfers raw data.
+    /// Handles <see cref="PluxAdapter.Clients.Client" /> connected to <see cref="PluxAdapter.Servers.Server" />, negotiates requests and transfers raw data.
     /// </summary>
     public sealed class Handler
     {
         /// <summary>
-        /// Holder of internal state required for raw data transfer by <see cref="PluxAdapter.Handler" />.
+        /// Holder of internal state required for raw data transfer by <see cref="PluxAdapter.Servers.Handler" />.
         /// </summary>
         private sealed class Cache
         {
             /// <summary>
-            /// Raw data <see cref="byte" /> offsets in <see cref="PluxAdapter.Handler.Cache.buffer" />.
+            /// Raw data <see cref="byte" /> offsets in <see cref="PluxAdapter.Servers.Handler.Cache.buffer" />.
             /// </summary>
             public readonly byte[] offsets;
             /// <summary>
-            /// Transfer buffer for raw data of particular <see cref="PluxAdapter.Device" />.
+            /// Transfer buffer for raw data of particular <see cref="PluxAdapter.Servers.Device" />.
             /// </summary>
             public readonly byte[] buffer;
 
             /// <summary>
-            /// Creates new <see cref="PluxAdapter.Handler.Cache" />.
+            /// Creates new <see cref="PluxAdapter.Servers.Handler.Cache" />.
             /// </summary>
-            /// <param name="index"><see cref="PluxAdapter.Device" /> index as requested by <see cref="PluxAdapter.Client" />.</param>
-            /// <param name="offsets">Raw data <see cref="byte" /> offsets in <see cref="PluxAdapter.Handler.Cache.buffer" />.</param>
+            /// <param name="index"><see cref="PluxAdapter.Servers.Device" /> index as requested by <see cref="PluxAdapter.Clients.Client" />.</param>
+            /// <param name="offsets">Raw data <see cref="byte" /> offsets in <see cref="PluxAdapter.Servers.Handler.Cache.buffer" />.</param>
             public Cache(byte index, byte[] offsets)
             {
                 this.offsets = offsets;
@@ -45,16 +45,16 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// <see cref="NLog.Logger" /> used by <see cref="PluxAdapter.Handler" />.
+        /// <see cref="NLog.Logger" /> used by <see cref="PluxAdapter.Servers.Handler" />.
         /// </summary>
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
-        /// Transfer buffer <see cref="PluxAdapter.Handler.Cache" /> mapped to <see cref="PluxAdapter.Device" />.
+        /// Transfer buffer <see cref="PluxAdapter.Servers.Handler.Cache" /> mapped to <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         private readonly Dictionary<Device, Cache> devices = new Dictionary<Device, Cache>();
         /// <summary>
-        /// <see cref="PluxAdapter.Server" /> managing <see cref="PluxAdapter.Handler" />.
+        /// <see cref="PluxAdapter.Servers.Server" /> managing <see cref="PluxAdapter.Servers.Handler" />.
         /// </summary>
         private readonly Server server;
         /// <summary>
@@ -71,9 +71,9 @@ namespace PluxAdapter
         private readonly NetworkStream stream;
 
         /// <summary>
-        /// Creates new <see cref="PluxAdapter.Handler" />.
+        /// Creates new <see cref="PluxAdapter.Servers.Handler" />.
         /// </summary>
-        /// <param name="server"><see cref="PluxAdapter.Server" /> managing <see cref="PluxAdapter.Handler" />.</param>
+        /// <param name="server"><see cref="PluxAdapter.Servers.Server" /> managing <see cref="PluxAdapter.Servers.Handler" />.</param>
         /// <param name="client">Underlying connection.</param>
         /// <param name="token"><see cref="System.Threading.CancellationToken" /> to monitor.</param>
         public Handler(Server server, TcpClient client, CancellationToken token)
@@ -85,10 +85,10 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Event callback of <see cref="PluxAdapter.Device.FrameReceived" />. Sends raw data to <see cref="PluxAdapter.Handler.client" /> connection.
+        /// Event callback of <see cref="PluxAdapter.Servers.Device.FrameReceived" />. Sends raw data to <see cref="PluxAdapter.Servers.Handler.client" /> connection.
         /// </summary>
-        /// <param name="sender"><see cref="PluxAdapter.Device" /> distributing raw data.</param>
-        /// <param name="eventArgs"><see cref="PluxAdapter.Device.FrameReceivedEventArgs" /> containing event data.</param>
+        /// <param name="sender"><see cref="PluxAdapter.Servers.Device" /> distributing raw data.</param>
+        /// <param name="eventArgs"><see cref="PluxAdapter.Servers.Device.FrameReceivedEventArgs" /> containing event data.</param>
         private void SendFrame(object sender, Device.FrameReceivedEventArgs eventArgs)
         {
             // note that this method is called from device specific loop, therefore overwriting device specific buffer is ok
@@ -116,7 +116,7 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Negotiates requested and available <see cref="PluxAdapter.Device" /> and registers <see cref="PluxAdapter.Device.FrameReceived" /> event handlers.
+        /// Negotiates requested and available <see cref="PluxAdapter.Servers.Device" /> and registers <see cref="PluxAdapter.Servers.Device.FrameReceived" /> event handlers.
         /// </summary>
         /// <returns><see cref="System.Threading.Tasks.Task" /> representing negotiation.</returns>
         public async Task Start()
@@ -213,7 +213,7 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Closes <see cref="PluxAdapter.Handler.client" /> connection and unregisters <see cref="PluxAdapter.Device.FrameReceived" /> event handlers. This is threadsafe.
+        /// Closes <see cref="PluxAdapter.Servers.Handler.client" /> connection and unregisters <see cref="PluxAdapter.Servers.Device.FrameReceived" /> event handlers. This is threadsafe.
         /// </summary>
         public void Stop()
         {

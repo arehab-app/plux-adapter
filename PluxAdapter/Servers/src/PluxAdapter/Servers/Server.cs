@@ -8,15 +8,15 @@ using System.Collections.Generic;
 using NLog;
 using CommandLine;
 
-namespace PluxAdapter
+namespace PluxAdapter.Servers
 {
     /// <summary>
-    /// Listens for connections from <see cref="PluxAdapter.Client" /> and manages <see cref="PluxAdapter.Handler" />.
+    /// Listens for connections from <see cref="PluxAdapter.Clients.Client" /> and manages <see cref="PluxAdapter.Servers.Handler" />.
     /// </summary>
-    public sealed class Server : Program.IExecutable
+    public sealed class Server : IExecutable
     {
         /// <summary>
-        /// <see cref="PluxAdapter.Server" /> configuration.
+        /// <see cref="PluxAdapter.Servers.Server" /> configuration.
         /// </summary>
         [Verb("server", isDefault: true, HelpText = "Start server.")]
         public sealed class Options
@@ -46,7 +46,7 @@ namespace PluxAdapter
             public int Resolution { get; }
 
             /// <summary>
-            /// Creates new <see cref="PluxAdapter.Server.Options" />.
+            /// Creates new <see cref="PluxAdapter.Servers.Server.Options" />.
             /// </summary>
             /// <param name="ipAddress">IP to bind to.</param>
             /// <param name="port">Port to bind to.</param>
@@ -62,16 +62,16 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// <see cref="NLog.Logger" /> used by <see cref="PluxAdapter.Server" />.
+        /// <see cref="NLog.Logger" /> used by <see cref="PluxAdapter.Servers.Server" />.
         /// </summary>
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
-        /// Managed <see cref="PluxAdapter.Handler" />.
+        /// Managed <see cref="PluxAdapter.Servers.Handler" />.
         /// </summary>
         private readonly List<Handler> handlers = new List<Handler>();
         /// <summary>
-        /// Parallel <see cref="System.Threading.Tasks.Task" /> used for <see cref="PluxAdapter.Handler" />.
+        /// Parallel <see cref="System.Threading.Tasks.Task" /> used for <see cref="PluxAdapter.Servers.Handler" />.
         /// </summary>
         private readonly List<Task> tasks = new List<Task>();
         /// <summary>
@@ -79,7 +79,7 @@ namespace PluxAdapter
         /// </summary>
         private TcpListener server;
         /// <summary>
-        /// <see cref="System.Threading.CancellationTokenSource" /> monitored by <see cref="PluxAdapter.Server" />.
+        /// <see cref="System.Threading.CancellationTokenSource" /> monitored by <see cref="PluxAdapter.Servers.Server" />.
         /// </summary>
         private CancellationTokenSource source;
 
@@ -88,12 +88,12 @@ namespace PluxAdapter
         /// </summary>
         public readonly Options options;
         /// <summary>
-        /// <see cref="PluxAdapter.Manager" /> used to manage <see cref="PluxAdapter.Device" />.
+        /// <see cref="PluxAdapter.Servers.Manager" /> used to manage <see cref="PluxAdapter.Servers.Device" />.
         /// </summary>
         public readonly Manager manager;
 
         /// <summary>
-        /// Creates new <see cref="PluxAdapter.Server" /> with <see cref="PluxAdapter.Server.Options" />.
+        /// Creates new <see cref="PluxAdapter.Servers.Server" /> with <see cref="PluxAdapter.Servers.Server.Options" />.
         /// </summary>
         /// <param name="options">Configuration options.</param>
         public Server(Options options)
@@ -103,7 +103,7 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Runs <see cref="PluxAdapter.Server" /> listening loop.
+        /// Runs <see cref="PluxAdapter.Servers.Server" /> listening loop.
         /// </summary>
         /// <returns><see cref="int" /> indicating listening loop exit reason.</returns>
         public async Task<int> Start()
@@ -145,7 +145,7 @@ namespace PluxAdapter
         }
 
         /// <summary>
-        /// Stops <see cref="PluxAdapter.Server" /> and it's monitored <see cref="PluxAdapter.Server.handlers" /> and <see cref="PluxAdapter.Server.tasks" />. This is threadsafe.
+        /// Stops <see cref="PluxAdapter.Servers.Server" /> and it's monitored <see cref="PluxAdapter.Servers.Server.handlers" /> and <see cref="PluxAdapter.Servers.Server.tasks" />. This is threadsafe.
         /// </summary>
         public void Stop()
         {

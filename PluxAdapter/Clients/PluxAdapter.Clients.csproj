@@ -1,20 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>net451</TargetFramework>
     <DebugType>portable</DebugType>
     <ProcessorArchitecture>amd64</ProcessorArchitecture>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Include="PluxAdapter.exe.nlog" CopyToOutputDirectory="Always" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="PluxDotNet" HintPath="./lib/PluxDotNet/plux.dll" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="NLog" Version="4.7.5" />
