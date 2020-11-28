@@ -5,6 +5,7 @@
     <TargetFramework>net451</TargetFramework>
     <DebugType>portable</DebugType>
     <ProcessorArchitecture>amd64</ProcessorArchitecture>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

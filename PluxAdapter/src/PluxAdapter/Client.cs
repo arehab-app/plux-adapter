@@ -13,28 +13,65 @@ using CommandLine;
 
 namespace PluxAdapter
 {
+    /// <summary>
+    /// Connects to <see cref="PluxAdapter.Server" /> and streams raw data from <see cref="PluxAdapter.Client.FrameReceived" /> event.
+    /// </summary>
     public sealed class Client : Program.IExecutable
     {
+        /// <summary>
+        /// <see cref="PluxAdapter.Client" /> configuration.
+        /// </summary>
         [Verb("client", HelpText = "Start client.")]
         public sealed class Options
         {
+            /// <summary>
+            /// IP to connect to.
+            /// </summary>
             [Option("ip-address", Default = "127.0.0.1", HelpText = "IP to connect to.")]
             public string IPAddress { get; private set; }
 
+            /// <summary>
+            /// Port to connect to.
+            /// </summary>
             [Option("port", Default = 24242, HelpText = "Port to connect to.")]
             public int Port { get; private set; }
 
+            /// <summary>
+            /// Paths of devices to request.
+            /// </summary>
             [Option("paths", HelpText = "(Default: all reachable paths) Paths of devices to request.")]
             public IEnumerable<string> Paths { get; private set; }
         }
 
+        /// <summary>
+        /// Mirror of <see cref="PluxAdapter.Device" /> configuration on <see cref="PluxAdapter.Server" /> side.
+        /// </summary>
         public sealed class Device
         {
+            /// <summary>
+            /// Path to <see cref="PluxAdapter.Client.Device" />.
+            /// </summary>
             public readonly string path;
+            /// <summary>
+            /// Description of <see cref="PluxAdapter.Client.Device" />.
+            /// </summary>
             public readonly string description;
+            /// <summary>
+            /// Connection base frequency for <see cref="PluxAdapter.Client.Device" />.
+            /// </summary>
             public readonly float frequency;
+            /// <summary>
+            /// <see cref="PluxAdapter.Client.Source" /> providing data to <see cref="PluxAdapter.Client.Device" />.
+            /// </summary>
             public readonly ReadOnlyCollection<Source> sources;
 
+            /// <summary>
+            /// Creates new <see cref="PluxAdapter.Client.Device" />.
+            /// </summary>
+            /// <param name="path">Path to <see cref="PluxAdapter.Client.Device" />.</param>
+            /// <param name="description">Description of <see cref="PluxAdapter.Client.Device" />.</param>
+            /// <param name="frequency">Connection base frequency for <see cref="PluxAdapter.Client.Device" />.</param>
+            /// <param name="sources"><see cref="PluxAdapter.Client.Source" /> providing data to <see cref="PluxAdapter.Client.Device" />.</param>
             public Device(string path, string description, float frequency, List<Source> sources)
             {
                 this.path = path;
@@ -44,13 +81,35 @@ namespace PluxAdapter
             }
         }
 
+        /// <summary>
+        /// Mirror of <see cref="PluxDotNet.Source" /> configuration on <see cref="PluxAdapter.Server" /> side.
+        /// </summary>
         public sealed class Source
         {
+            /// <summary>
+            /// Raw data port on <see cref="PluxAdapter.Client.Device" />.
+            /// </summary>
             public readonly int port;
+            /// <summary>
+            /// Divisor applied to <see cref="PluxAdapter.Client.Device.frequency" />.
+            /// </summary>
             public readonly int frequencyDivisor;
+            /// <summary>
+            /// Raw data resolution in bits.
+            /// </summary>
             public readonly int resolution;
+            /// <summary>
+            /// Mask of raw data channels open on <see cref="PluxAdapter.Client.Source.port" />.
+            /// </summary>
             public readonly int channelMask;
 
+            /// <summary>
+            /// Creates new <see cref="PluxAdapter.Client.Source" />.
+            /// </summary>
+            /// <param name="port">Raw data port on <see cref="PluxAdapter.Client.Device" />.</param>
+            /// <param name="frequencyDivisor">Divisor applied to <see cref="PluxAdapter.Client.Device.frequency" />.</param>
+            /// <param name="resolution">Raw data resolution in bits.</param>
+            /// <param name="channelMask">Mask of raw data channels open on <paramref name="port" />.</param>
             public Source(int port, int frequencyDivisor, int resolution, int channelMask)
             {
                 this.port = port;
@@ -60,13 +119,35 @@ namespace PluxAdapter
             }
         }
 
+        /// <summary>
+        /// Event data for <see cref="PluxAdapter.Client.FrameReceived" />.
+        /// </summary>
         public sealed class FrameReceivedEventArgs : EventArgs
         {
+            /// <summary>
+            /// Counter of last frame received by <see cref="PluxAdapter.Client" />.
+            /// </summary>
             public readonly int lastFrame;
+            /// <summary>
+            /// Counter of this frame.
+            /// </summary>
             public readonly int currentFrame;
+            /// <summary>
+            /// Raw data from <see cref="PluxAdapter.Client" />.
+            /// </summary>
             public readonly ReadOnlyCollection<ushort> data;
+            /// <summary>
+            /// <see cref="PluxAdapter.Client.Device" /> mirroring <see cref="PluxAdapter.Device" /> configuration on <see cref="PluxAdapter.Server" /> side.
+            /// </summary>
             public readonly Device device;
 
+            /// <summary>
+            /// Creates new <see cref="PluxAdapter.Client.FrameReceivedEventArgs" />.
+            /// </summary>
+            /// <param name="lastFrame">Counter of last frame received by <see cref="PluxAdapter.Client" />.</param>
+            /// <param name="currentFrame">Counter of this frame.</param>
+            /// <param name="data">Raw data.</param>
+            /// <param name="device"><see cref="PluxAdapter.Client.Device" /> mirroring <see cref="PluxAdapter.Device" /> configuration on <see cref="PluxAdapter.Server" /> side.</param>
             public FrameReceivedEventArgs(int lastFrame, int currentFrame, ushort[] data, Device device)
             {
                 this.lastFrame = lastFrame;
@@ -76,16 +157,39 @@ namespace PluxAdapter
             }
         }
 
+        /// <summary>
+        /// <see cref="NLog.Logger" /> used by <see cref="PluxAdapter.Client" />.
+        /// </summary>
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
+        /// <summary>
+        /// Event raised on each raw data frame received.
+        /// </summary>
         public event EventHandler<FrameReceivedEventArgs> FrameReceived;
 
+        /// <summary>
+        /// Configuration options.
+        /// </summary>
         private readonly Options options;
+        /// <summary>
+        /// Underlying connection.
+        /// </summary>
         private TcpClient client;
+        /// <summary>
+        /// <see cref="System.Threading.CancellationTokenSource" /> monitored by <see cref="PluxAdapter.Client" />.
+        /// </summary>
         private CancellationTokenSource source;
 
+        /// <summary>
+        /// Creates new <see cref="PluxAdapter.Client" /> with <see cref="PluxAdapter.Client.Options" />.
+        /// </summary>
+        /// <param name="options">Configuration options.</param>
         public Client(Options options) { this.options = options; }
 
+        /// <summary>
+        /// Runs <see cref="PluxAdapter.Client" /> communication loop.
+        /// </summary>
+        /// <returns><see cref="int" /> indicating communication loop exit reason.</returns>
         public async Task<int> Start()
         {
             IPAddress ipAddress = IPAddress.Parse(options.IPAddress);
@@ -197,6 +301,9 @@ namespace PluxAdapter
             return 0;
         }
 
+        /// <summary>
+        /// Stops <see cref="PluxAdapter.Client" /> communication loop. This is threadsafe.
+        /// </summary>
         public void Stop()
         {
             logger.Info("Stopping");
