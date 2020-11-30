@@ -5,13 +5,45 @@ Connects to sensors and distributes their data over TCP/IP allowing connection t
 ## Installation
 
 For development:
-* [https://github.com/biosignalsplux/c-sharp-sample](https://github.com/biosignalsplux/c-sharp-sample) - used to connect to Plux devices, simply drop "plux.dll" and (optional - used for intellisense) "plux.xml" in [PluxAdapter/Servers/lib/PluxDotNet](./PluxAdapter/Servers/lib/PluxDotNet).
-* [https://dotnet.microsoft.com/download/dotnet/5.0](https://dotnet.microsoft.com/download/dotnet/5.0) - used to compile code.
-* (optional) [https://dotnet.microsoft.com/download/dotnet-framework/net451](https://dotnet.microsoft.com/download/dotnet-framework/net451) - used for intellisense.
-* (optional) [https://code.visualstudio.com/](https://code.visualstudio.com/) - used to write code. Note that there are some VSC specific configuration files included in [.vscode](./.vscode). Especially consider [.vscode/launch.json](./.vscode/launch.json), without it VSC can't execute code(note that "dotnet.exe" still can, it's just that VSC can't figure out if it's supposed to use ".NET Framework" or ".NET Core" debugger).
+1. [https://dotnet.microsoft.com/download/dotnet/5.0](https://dotnet.microsoft.com/download/dotnet/5.0) - used to compile code.
+1. [https://dotnet.microsoft.com/download/dotnet-framework/net451](https://dotnet.microsoft.com/download/dotnet-framework/net451) - used to compile code.
+1. [https://github.com/biosignalsplux/c-sharp-sample](https://github.com/biosignalsplux/c-sharp-sample) - used to connect to Plux devices, simply drop "plux.dll" and (optional - used for intellisense) "plux.xml" in [PluxAdapter/Servers/lib/PluxDotNet](./PluxAdapter/Servers/lib/PluxDotNet).
+1. (optional) [https://code.visualstudio.com/](https://code.visualstudio.com/) - used to write code. Note that there are some VSC specific configuration files included in [.vscode](./.vscode). Especially consider [.vscode/launch.json](./.vscode/launch.json), without it VSC can't execute code(note that "dotnet.exe" still can, it's just that VSC can't figure out if it's supposed to use ".NET Framework" or ".NET Core" debugger).
 
 For deployment:
-* Just drop [https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-publish](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-publish) result somewhere and execute it(note that [https://dotnet.microsoft.com/download/dotnet-framework/net451](https://dotnet.microsoft.com/download/dotnet-framework/net451) is required for execution, it's shipped with "Windows 8.1" or later).
+1. Compile source(see [Compilation](#Compilation)).
+1. Distribute client or server depending on use case, but note that:
+    * Server can also perform as client.
+    * Target machine requires "Runtime" from [https://dotnet.microsoft.com/download/dotnet-framework/net451](https://dotnet.microsoft.com/download/dotnet-framework/net451) or later("Windows 8.1" or later has it by default).
+
+## Compilation
+
+To compile from source:
+1. Make sure "Developer Pack" from [https://dotnet.microsoft.com/download/dotnet-framework/net451](https://dotnet.microsoft.com/download/dotnet-framework/net451) is installed.
+1. Make sure "SDK" from [https://dotnet.microsoft.com/download/dotnet/5.0](https://dotnet.microsoft.com/download/dotnet/5.0) is installed.
+1. Download/clone the source from [https://github.com/arehab-app/plux-adapter](https://github.com/arehab-app/plux-adapter) and extract it somewhere.
+1. Download/clone plux driver from [https://github.com/biosignalsplux/c-sharp-sample](https://github.com/biosignalsplux/c-sharp-sample) and extract it next to "plux-adapter" directory.
+1. Go to "plux-adapter/PluxAdapter/Clients" directory and execute "dotnet.exe publish" from terminal:
+    ```bash
+    cd plux-adapter/PluxAdapter/Clients
+    dotnet.exe publish
+    ```
+1. Go to "plux-adapter/PluxAdapter/Servers" directory and copy/symlink "plux-adapter/PluxAdapter/Clients/bin/Debug/net451/publish" directory to "plux-adapter/PluxAdapter/Servers/lib/PluxAdapter" directory:
+    ```bash
+    cd ../Servers
+    mkdir lib
+    cp -r ../Clients/bin/Debug/net451/publish lib/PluxAdapter
+    ```
+1. While still in "plux-adapter/PluxAdapter/Servers" directory copy/symlink "c-sharp-sample/64-bit" directory to "plux-adapter/PluxAdapter/Servers/lib/PluxDotNet" directory:
+    ```bash
+    cp -r ../../../c-sharp-sample/64-bit lib/PluxDotNet
+    ```
+1. While still in "plux-adapter/PluxAdapter/Servers" directory  execute "dotnet.exe publish" from terminal:
+    ```bash
+    dotnet.exe publish
+    ```
+1. In "plux-adapter/PluxAdapter/Clients/bin/Debug/net451/publish" directory is everything that's required for client, mainly it contains dll for programmatic access and xml for intellisense.
+1. In "plux-adapter/PluxAdapter/Servers/bin/Debug/net451/publish" directory is everything that's required for server, mainly it contains everything from "plux-adapter/PluxAdapter/Clients/bin/Debug/net451/publish" directory, exe for execution/programmatic access, xml for intellisense and nlog for logging configuration.
 
 ## Examples
 
@@ -34,7 +66,7 @@ From command line:
     ```
 
 From code:
-* Connect to local server from unity and request specific devices:
+* Connect to local server from unity and request specific devices(note that server must be running in parallel, see [Examples](#Examples)):
     ```c#
     using System;
     using System.Threading.Tasks;
@@ -89,8 +121,14 @@ Plux Adapter is structured in the following main classes(note that many other cl
 ## Logging
 
 Two types of logs are generated(all directories are relative to the main application executable):
-* Control logs are located in "logs" directory, these contain general purpose logs of everything of note that's going on in the library. These are configured in [PluxAdapter/Servers/PluxAdapter.Servers.exe.nlog](./PluxAdapter/Servers/PluxAdapter.Servers.exe.nlog).
-* Data logs are located in "data" directory, these contain raw data received from sensors. These are stamped with logging start time and sensor path.
+* Control logs are located in "logs" directory, these contain general purpose logs of everything of note that's going on in the library.
+    * These are configured in [PluxAdapter/Servers/PluxAdapter.Servers.exe.nlog](./PluxAdapter/Servers/PluxAdapter.Servers.exe.nlog).
+* Data logs are located in "data" directory, these contain raw data received from sensors.
+    * The files are stamped with logging start time and sensor path.
+    * The files contain csv data with:
+        * Frame counter since device start.
+        * Time of frame as number of ticks(each tick is 100 ns, see [https://docs.microsoft.com/en-us/dotnet/api/system.datetime.ticks?view=netframework-4.5.1#remarks](https://docs.microsoft.com/en-us/dotnet/api/system.datetime.ticks?view=netframework-4.5.1#remarks)) since the epoch(1970-01-01, see [https://en.wikipedia.org/wiki/Epoch_(computing)](https://en.wikipedia.org/wiki/Epoch_(computing))).
+        * Data itself is stored in following columns using {sensor port}-{port channel} convention for column names(example: "11-0,11-1" are 2 columns for 11th port with 0th and 1st channel).
 
 ## License
 
